@@ -64,11 +64,17 @@ class Message(models.Model):
 
     content = models.TextField()
 
+    image = models.ImageField(
+    upload_to='chat_images/',
+    null=True,
+    blank=True
+)
+
     status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default='open'
-    )
+    max_length=20,
+    choices=STATUS_CHOICES,
+    default='open'
+)
 
     accepted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

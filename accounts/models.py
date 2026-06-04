@@ -8,10 +8,22 @@ class User(AbstractUser):
         ('retailer', 'Retailer'),
         ('wholesaler', 'Wholesaler'),
     )
+    is_online = models.BooleanField(
+        default=False
+    )
 
     role = models.CharField(
         max_length=20,
         choices=ROLE_CHOICES
+    )
+    last_seen = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    avatar = models.ImageField(
+        upload_to='avatars/',
+        null=True,
+        blank=True
     )
 
     phone_number = models.CharField(

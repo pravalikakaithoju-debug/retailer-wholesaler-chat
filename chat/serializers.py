@@ -8,12 +8,14 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'role']
+        fields = ['id', 'username', 'role','is_online','avatar']
 
 
 class MessageSerializer(serializers.ModelSerializer):
 
     sender = UserSerializer(read_only=True)
+
+    accepted_by = UserSerializer(read_only=True)
 
     class Meta:
         model = Message

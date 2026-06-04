@@ -10,7 +10,7 @@ from accounts.models import User
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from rest_framework.permissions import IsAuthenticated
-
+from django.utils import timezone
 
 class ChatRoomListAPIView(APIView):
 
@@ -155,11 +155,20 @@ class WholesalerListAPIView(APIView):
 
         for user in wholesalers:
 
-            data.append({
+           data.append({
 
-                'id': user.id,
+              'id': user.id,
 
-                'username': user.username
+              'username': user.username,
+
+               'is_online': user.is_online,
+
+               'last_seen': user.last_seen,
+
+                'avatar':
+                   user.avatar.url
+                   if user.avatar
+                   else None
             })
 
         return Response(data)
@@ -276,8 +285,88 @@ class RetailerListAPIView(APIView):
         for user in retailers:
 
             data.append({
-                'id': user.id,
-                'username': user.username
+
+               'id': user.id,
+
+               'username': user.username,
+
+               'is_online': user.is_online,
+               'last_seen': user.last_seen,
+               'avatar':
+                        user.avatar.url
+                        if user.avatar
+                        else None
             })
 
         return Response(data)
+class LogoutAPIView(APIView):
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    def post(self, request):
+
+        user = request.user
+
+        user.is_online = False
+
+        user.last_seen = timezone.now()
+
+        user.save()
+
+        return Response({
+            "message": "Logged out"
+        })
+class UploadImageAPIView(APIView):
+
+    def post(self, request):
+
+        room_id = request.data.get('room_id')
+
+        sender_id = request.data.get('sender_id')
+
+        image = request.FILES.get('image')
+
+        try:
+
+            room = ChatRoom.objects.get(
+                id=room_id
+            )
+
+            sender = User.objects.get(
+                id=sender_id
+            )
+            print("IMAGE RECEIVED:", image)
+            message = Message.objects.create(
+
+    room=room,
+
+    sender=sender,
+
+    image=image,
+
+    content=request.data.get(
+        'content',
+        ''
+    )
+)
+            message.image = image 
+            message.save()
+
+            print("SAVED IMAGE:", message.image)
+
+            serializer = MessageSerializer(
+                message
+            )
+
+            return Response(
+                serializer.data
+            )
+
+        except Exception as e:
+
+            return Response(
+                {'error': str(e)},
+                status=400
+            )

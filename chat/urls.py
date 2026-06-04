@@ -9,6 +9,8 @@ from .views import (
     CreateDirectRoomAPIView,
     CurrentUserAPIView,
     RetailerListAPIView,
+    LogoutAPIView,
+    UploadImageAPIView,
 
 )
 
@@ -47,5 +49,14 @@ urlpatterns = [
     path(
     'retailers/',
     RetailerListAPIView.as_view()
-),
+    ),
+    path(
+    'logout/',
+    LogoutAPIView.as_view()
+    ), 
+    path(
+    'upload-image/',
+    UploadImageAPIView.as_view()
+    ), 
+
 ]
