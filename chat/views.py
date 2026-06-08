@@ -67,7 +67,8 @@ class SendMessageAPIView(APIView):
                 room=room,
                 sender=sender,
                 content=content,
-                message_type=message_type
+                message_type=message_type,
+                status='pending'
             )
 
             serializer = MessageSerializer(message)
@@ -110,7 +111,7 @@ class AcceptMessageAPIView(APIView):
 
         try:
 
-            wholesaler = User.objects.get(id=3)
+            wholesaler = request.user
 
         except User.DoesNotExist:
 
@@ -143,6 +144,56 @@ class AcceptMessageAPIView(APIView):
         serializer = MessageSerializer(message)
 
         return Response(serializer.data)
+
+class RejectMessageAPIView(APIView):
+
+    def post(self, request, message_id):
+
+        try:
+
+            message = Message.objects.get(
+                id=message_id
+            )
+
+        except Message.DoesNotExist:
+
+            return Response(
+                {"error": "Message not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if message.status == 'rejected':
+
+            return Response(
+                {"error": "Request already rejected"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+
+            wholesaler = User.objects.get(id=3)
+
+        except User.DoesNotExist:
+
+            return Response(
+                {"error": "Wholesaler not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        message.status = 'rejected'
+
+        message.accepted_by = wholesaler
+
+        message.save()
+
+        serializer = MessageSerializer(
+            message
+        )
+
+        return Response(
+            serializer.data
+        )
+
 class WholesalerListAPIView(APIView):
 
     def get(self, request):
@@ -350,7 +401,7 @@ class UploadImageAPIView(APIView):
         'content',
         ''
     )
-)
+) 
             message.image = image 
             message.save()
 

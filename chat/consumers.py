@@ -101,5 +101,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             room=room,
             sender=sender,
             content=content,
-            message_type='text'
+            message_type='text',
+            status='pending'
         )
