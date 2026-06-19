@@ -5,12 +5,15 @@ from .views import (
     MessageListAPIView,
     SendMessageAPIView,
     AcceptMessageAPIView,
+    RejectMessageAPIView,
     WholesalerListAPIView,
     CreateDirectRoomAPIView,
     CurrentUserAPIView,
     RetailerListAPIView,
     LogoutAPIView,
     UploadImageAPIView,
+    DeleteChatAPIView,
+    AcceptedProductsAPIView,
 
 )
 
@@ -35,6 +38,10 @@ urlpatterns = [
     AcceptMessageAPIView.as_view()
     ),
     path(
+    'reject-message/<int:message_id>/',
+    RejectMessageAPIView.as_view()
+),
+    path(
     'wholesalers/',
     WholesalerListAPIView.as_view()
     ),
@@ -58,5 +65,13 @@ urlpatterns = [
     'upload-image/',
     UploadImageAPIView.as_view()
     ), 
+    path(
+    'delete-chat/<int:room_id>/',
+    DeleteChatAPIView.as_view()
+),
+path(
+    'accepted-products/',
+    AcceptedProductsAPIView.as_view()
+),
 
 ]

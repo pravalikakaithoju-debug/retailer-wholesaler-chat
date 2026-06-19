@@ -41,9 +41,10 @@ class Message(models.Model):
     )
 
     STATUS_CHOICES = (
-        ('open', 'Open'),
-        ('accepted', 'Accepted'),
-    )
+    ('pending', 'Pending'),
+    ('accepted', 'Accepted'),
+    ('rejected', 'Rejected'),
+)
 
     room = models.ForeignKey(
         ChatRoom,
@@ -73,7 +74,7 @@ class Message(models.Model):
     status = models.CharField(
     max_length=20,
     choices=STATUS_CHOICES,
-    default='open'
+    default='pending'
 )
 
     accepted_by = models.ForeignKey(
@@ -90,3 +91,29 @@ class Message(models.Model):
 
     def __str__(self):
         return self.content[:30]
+    
+class AcceptedProduct(models.Model):
+
+    retailer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='accepted_retailer_products'
+    )
+
+    wholesaler = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='accepted_wholesaler_products'
+    )
+
+    product_name = models.CharField(
+        max_length=255
+    )
+
+    accepted_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    def __str__(self):
+
+        return self.product_name

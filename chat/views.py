@@ -11,6 +11,7 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
+from .models import AcceptedProduct
 
 class ChatRoomListAPIView(APIView):
 
@@ -30,18 +31,43 @@ class MessageListAPIView(APIView):
 
     def get(self, request, room_id):
 
-        messages = Message.objects.filter(
-            room_id=room_id
+        room = ChatRoom.objects.get(
+            id=room_id
         )
+
+        # Broadcast Room Logic
+        if room.room_type == 'broadcast':
+
+            # Retailer sees only his own messages
+            if request.user.role == 'retailer':
+
+                messages = Message.objects.filter(
+                    room=room,
+                    sender=request.user
+                )
+
+            # Wholesaler sees all retailer messages
+            else:
+
+                messages = Message.objects.filter(
+                    room=room
+                )
+
+        # Direct Chat Logic
+        else:
+
+            messages = Message.objects.filter(
+                room=room
+            )
 
         serializer = MessageSerializer(
             messages,
             many=True
         )
 
-        return Response(serializer.data)
-
-
+        return Response(
+            serializer.data
+        )
 class SendMessageAPIView(APIView):
 
     def post(self, request):
@@ -125,6 +151,14 @@ class AcceptMessageAPIView(APIView):
         message.accepted_by = wholesaler
 
         message.save()
+        AcceptedProduct.objects.create(
+
+    retailer=message.sender,
+
+    wholesaler=wholesaler,
+
+    product_name=message.content
+)
 
         # REAL-TIME UPDATE
 
@@ -319,10 +353,11 @@ class CurrentUserAPIView(APIView):
 
     def get(self, request):
         return Response({
-            "id": request.user.id,
-            "username": request.user.username,
-            "role": request.user.role
-        })
+    "id": request.user.id,
+    "username": request.user.username,
+    "role": request.user.role,
+    "avatar": request.user.avatar.url if request.user.avatar else None,
+})
 class RetailerListAPIView(APIView):
 
     def get(self, request):
@@ -337,19 +372,23 @@ class RetailerListAPIView(APIView):
 
             data.append({
 
-               'id': user.id,
+                'id': user.id,
 
-               'username': user.username,
+                'username': user.username,
 
-               'is_online': user.is_online,
-               'last_seen': user.last_seen,
-               'avatar':
-                        user.avatar.url
-                        if user.avatar
-                        else None
+                'is_online': user.is_online,
+
+                'last_seen': user.last_seen,
+
+                'avatar':
+                    user.avatar.url
+                    if user.avatar
+                    else None
             })
 
         return Response(data)
+    
+    
 class LogoutAPIView(APIView):
 
     permission_classes = [
@@ -370,6 +409,7 @@ class LogoutAPIView(APIView):
             "message": "Logged out"
         })
 class UploadImageAPIView(APIView):
+
 
     def post(self, request):
 
@@ -421,3 +461,52 @@ class UploadImageAPIView(APIView):
                 {'error': str(e)},
                 status=400
             )
+
+class DeleteChatAPIView(APIView):
+
+    def delete(self, request, room_id):
+
+        Message.objects.filter(
+            room_id=room_id
+        ).delete()
+
+        return Response({
+            "message":
+            "Chat deleted successfully"
+        })
+class AcceptedProductsAPIView(APIView):
+
+    def get(self, request):
+
+        retailer_id = request.GET.get(
+            'retailer_id'
+        )
+
+        wholesaler_id = request.GET.get(
+            'wholesaler_id'
+        )
+
+        products = AcceptedProduct.objects.filter(
+
+            retailer_id=retailer_id,
+
+            wholesaler_id=wholesaler_id
+        )
+
+        data = [
+
+    {
+        "product_name":
+        p.product_name,
+
+        "wholesaler":
+        p.wholesaler.username,
+
+        "accepted_at":
+        p.accepted_at
+    }
+
+    for p in products
+]
+
+        return Response(data)
