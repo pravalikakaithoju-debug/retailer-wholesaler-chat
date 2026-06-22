@@ -46,16 +46,35 @@ class ChatConsumer(AsyncWebsocketConsumer):
             sender,
             message
         )
-
+    
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'chat_message',
                 'message': saved_message.content,
                 'sender': sender.username,
+                'sender_id': sender.id,
                 'message_id': saved_message.id,
             }
         )
+    async def product_rejected(
+    self,
+    event
+    ):
+
+        await self.send(
+        text_data=json.dumps({
+
+            'type': 'product_rejected',
+
+            'message_id':
+            event['message_id'],
+
+            'rejected_by':
+            event['rejected_by']
+
+        })
+    )
 
 
     async def chat_message(self, event):
@@ -67,6 +86,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'message': event['message'],
 
             'sender': event['sender'],
+             'sender_id': event['sender_id'],
 
             'message_id': event['message_id'],
         }))
@@ -83,6 +103,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             'status': 'accepted'
         }))
+    async def product_rejected(
+    self,
+    event
+):
+
+        await self.send(
+        text_data=json.dumps({
+            "type": "product_rejected",
+            "message_id": event["message_id"]
+        })
+    )
 
     @database_sync_to_async
     def get_room(self, room_id):

@@ -1,5 +1,8 @@
 from django.db import models
 from django.conf import settings
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class ChatRoom(models.Model):
@@ -117,3 +120,19 @@ class AcceptedProduct(models.Model):
     def __str__(self):
 
         return self.product_name
+    
+class HiddenAcceptedProduct(models.Model):
+
+    wholesaler = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE
+    )
+
+    accepted_product = models.ForeignKey(
+        AcceptedProduct,
+        on_delete=models.CASCADE
+    )
+
+    hidden_at = models.DateTimeField(
+        auto_now_add=True
+    )

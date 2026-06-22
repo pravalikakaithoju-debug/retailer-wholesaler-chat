@@ -12,6 +12,7 @@ from channels.layers import get_channel_layer
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from .models import AcceptedProduct
+from .models import HiddenAcceptedProduct
 
 class ChatRoomListAPIView(APIView):
 
@@ -34,26 +35,87 @@ class MessageListAPIView(APIView):
         room = ChatRoom.objects.get(
             id=room_id
         )
+        
 
-        # Broadcast Room Logic
+        print(
+            "Logged User:",
+            request.user.username
+        )
+
+        print(
+            "Role:",
+            request.user.role
+        )
+
+        print(
+            "Room Type:",
+            room.room_type
+        )
+        print(
+    "REQUEST USER:",
+    request.user.username
+)
+
+        print(
+    "REQUEST USER ID:",
+    request.user.id
+)
+
+        print(
+    "ROLE:",
+    request.user.role
+)
+
         if room.room_type == 'broadcast':
 
-            # Retailer sees only his own messages
             if request.user.role == 'retailer':
+                print(
+    "Filtering by sender:",
+    request.user.username
+)
 
                 messages = Message.objects.filter(
                     room=room,
                     sender=request.user
                 )
+                print(
+    "USER:",
+    request.user.username
+) 
+                print(
+    "ROOM:",
+    room.id
+)
+                print(
+    "MESSAGES:",
+    list(
+        messages.values_list(
+            "content",
+            flat=True
+        )
+    )
+)
 
-            # Wholesaler sees all retailer messages
+                print(
+                    "Retailer Messages Count:",
+                    messages.count()
+                )
+
+                for msg in messages:
+
+                    print(
+                        "Message Sender:",
+                        msg.sender.username,
+                        "| Content:",
+                        msg.content
+                    )
+
             else:
 
                 messages = Message.objects.filter(
                     room=room
                 )
 
-        # Direct Chat Logic
         else:
 
             messages = Message.objects.filter(
@@ -192,33 +254,54 @@ class RejectMessageAPIView(APIView):
         except Message.DoesNotExist:
 
             return Response(
-                {"error": "Message not found"},
+                {
+                    "error":
+                    "Message not found"
+                },
                 status=status.HTTP_404_NOT_FOUND
             )
 
         if message.status == 'rejected':
 
             return Response(
-                {"error": "Request already rejected"},
+                {
+                    "error":
+                    "Request already rejected"
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-
-            wholesaler = User.objects.get(id=3)
-
-        except User.DoesNotExist:
-
-            return Response(
-                {"error": "Wholesaler not found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        wholesaler = request.user
 
         message.status = 'rejected'
 
         message.accepted_by = wholesaler
 
         message.save()
+
+        # REAL-TIME UPDATE
+
+        channel_layer = get_channel_layer()
+
+        room_group_name = (
+            f'chat_{message.room.id}'
+        )
+
+        async_to_sync(
+            channel_layer.group_send
+        )(
+            room_group_name,
+            {
+                'type':
+                'product_rejected',
+
+                'message_id':
+                message.id,
+
+                'rejected_by':
+                wholesaler.username,
+            }
+        )
 
         serializer = MessageSerializer(
             message
@@ -227,7 +310,6 @@ class RejectMessageAPIView(APIView):
         return Response(
             serializer.data
         )
-
 class WholesalerListAPIView(APIView):
 
     def get(self, request):
@@ -383,7 +465,7 @@ class RetailerListAPIView(APIView):
                 'avatar':
                     user.avatar.url
                     if user.avatar
-                    else None
+                    else None 
             })
 
         return Response(data)
@@ -466,9 +548,22 @@ class DeleteChatAPIView(APIView):
 
     def delete(self, request, room_id):
 
-        Message.objects.filter(
-            room_id=room_id
-        ).delete()
+        room = ChatRoom.objects.get(
+            id=room_id
+        )
+
+        if request.user.role == 'retailer':
+
+            Message.objects.filter(
+                room=room,
+                sender=request.user
+            ).delete()
+
+        else:
+
+            Message.objects.filter(
+                room=room
+            ).delete()
 
         return Response({
             "message":
@@ -486,27 +581,76 @@ class AcceptedProductsAPIView(APIView):
             'wholesaler_id'
         )
 
+        hidden_ids = HiddenAcceptedProduct.objects.filter(
+            wholesaler=request.user
+        ).values_list(
+            'accepted_product_id',
+            flat=True
+        )
+
         products = AcceptedProduct.objects.filter(
 
             retailer_id=retailer_id,
 
             wholesaler_id=wholesaler_id
+
+        ).exclude(
+
+            id__in=hidden_ids
         )
 
         data = [
 
-    {
-        "product_name":
-        p.product_name,
+            {
+                "id": p.id,
 
-        "wholesaler":
-        p.wholesaler.username,
+                "product_name":
+                p.product_name,
 
-        "accepted_at":
-        p.accepted_at
-    }
+                "wholesaler":
+                p.wholesaler.username,
 
-    for p in products
-]
+                "accepted_at":
+                p.accepted_at
+            }
+
+            for p in products
+        ]
 
         return Response(data)
+    
+class DeleteAcceptedProductAPIView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def delete(
+        self,
+        request,
+        product_id
+    ):
+
+        try:
+
+            product = AcceptedProduct.objects.get(
+                id=product_id,
+                wholesaler=request.user
+            )
+
+            product.delete()
+
+            return Response(
+                {
+                    "message":
+                    "Product deleted successfully"
+                }
+            )
+
+        except AcceptedProduct.DoesNotExist:
+
+            return Response(
+                {
+                    "error":
+                    "Product not found"
+                },
+                status=404
+            )

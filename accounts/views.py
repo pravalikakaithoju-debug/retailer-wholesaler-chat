@@ -35,9 +35,10 @@ class RegisterAPIView(APIView):
         role = request.data.get(
             'role'
         )
+
         email = request.data.get(
-    'email'
-)
+            'email'
+        )
 
         avatar = request.FILES.get(
             'avatar'
@@ -56,11 +57,26 @@ class RegisterAPIView(APIView):
             )
 
         user = User.objects.create_user(
-    username=username,
-    password=password,
-    role=role,
-    email=email
-)
+            username=username,
+            password=password,
+            role=role,
+            email=email
+        )
+
+        # Automatically add retailer to broadcast room
+        if role == 'retailer':
+
+            from chat.models import ChatRoom
+
+            broadcast_room = ChatRoom.objects.filter(
+                room_type='broadcast'
+            ).first()
+
+            if broadcast_room:
+
+                broadcast_room.participants.add(
+                    user
+                )
 
         if avatar:
 

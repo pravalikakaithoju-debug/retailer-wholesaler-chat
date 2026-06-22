@@ -14,6 +14,7 @@ from .views import (
     UploadImageAPIView,
     DeleteChatAPIView,
     AcceptedProductsAPIView,
+    DeleteAcceptedProductAPIView
 
 )
 
@@ -72,6 +73,10 @@ urlpatterns = [
 path(
     'accepted-products/',
     AcceptedProductsAPIView.as_view()
+),
+path(
+    'delete-accepted-product/<int:product_id>/',
+    DeleteAcceptedProductAPIView.as_view()
 ),
 
 ]
