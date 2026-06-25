@@ -40,6 +40,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         room = await self.get_room(self.room_id)
 
         sender = await self.get_user(sender_id)
+        if (
+           self.room.room_type == "broadcast"
+           and sender.role == "wholesaler"
+            ):
+            return
 
         saved_message = await self.save_message(
             room,
