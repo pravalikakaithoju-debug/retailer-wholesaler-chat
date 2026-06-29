@@ -38,13 +38,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         sender_id = data['sender_id']
 
         room = await self.get_room(self.room_id)
-
         sender = await self.get_user(sender_id)
+
         if (
-           self.room.room_type == "broadcast"
-           and sender.role == "wholesaler"
-            ):
-            return
+            room.room_type == "broadcast"
+            and sender.role == "wholesaler"
+        ):
+         return
 
         saved_message = await self.save_message(
             room,
@@ -62,26 +62,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'message_id': saved_message.id,
             }
         )
-    async def product_rejected(
-    self,
-    event
-    ):
-
-        await self.send(
-        text_data=json.dumps({
-
-            'type': 'product_rejected',
-
-            'message_id':
-            event['message_id'],
-
-            'rejected_by':
-            event['rejected_by']
-
-        })
-    )
-
-
+   
     async def chat_message(self, event):
 
         await self.send(text_data=json.dumps({
@@ -108,17 +89,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             'status': 'accepted'
         }))
-    async def product_rejected(
-    self,
-    event
-):
-
-        await self.send(
-        text_data=json.dumps({
-            "type": "product_rejected",
-            "message_id": event["message_id"]
-        })
-    )
+    
 
     @database_sync_to_async
     def get_room(self, room_id):
